@@ -93,15 +93,12 @@ class UserDetailsView(APIView):
         
     
 class AllBooks(APIView):
-    
+     """
+     Return a list of all books or filtered books based on query parameters.
+     POST only for authenticated users
+     """        
      
      def get(self, request, format=None):
-
-        """
-        Return a list of all books or filtered books based on query parameters.
-        POST only for authenticated users
-        """        
-     
         title = request.GET.get('title', '')
         authorname=request.GET.get('author','')
         filtered_books = Book.objects.filter(title__icontains=title,author__author_pseudonym__icontains=authorname, )

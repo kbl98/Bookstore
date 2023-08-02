@@ -48,19 +48,12 @@ class BookSerializer(serializers.ModelSerializer):
     
 
 class LoginSerializer(serializers.Serializer):
-    """
-    This serializer defines two fields for authentication:
-      * username
-      * password.
-    It will try to authenticate the user with when validated.
-    """
     username = serializers.CharField(
         label="Username",
         write_only=True
     )
     password = serializers.CharField(
         label="Password",
-        # This will be used when the DRF browsable API is enabled
         style={'input_type': 'password'},
         trim_whitespace=False,
         write_only=True
@@ -69,8 +62,6 @@ class LoginSerializer(serializers.Serializer):
     
 
     def validate(self, validated_data):
-        # Take username and password from request
-       
         username = validated_data.get('username')
         password = validated_data.get('password')
         print(username)
