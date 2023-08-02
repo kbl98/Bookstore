@@ -9,7 +9,7 @@ class CustomUserSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = CustomUser
-        fields = ['username', 'email','author_pseudonym','password']
+        fields = ['username', 'email','author_pseudonym']
 
     def create(self,validated_data):
         password=validated_data.get('password')

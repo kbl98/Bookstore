@@ -16,16 +16,15 @@ from django.http import HttpResponse
 class AllUsers(APIView):
     """
     View to list all users in the system.
-
-    * Requires token authentication.
-    * Only admin users are able to access this view.
+    Requires token authentication.
+    Only admin users are able to access this view.
     """
-    #authentication_classes = [authentication.TokenAuthentication]
-    #permission_classes = [permissions.IsAdminUser]
+   
     renderer_classes = [XMLRenderer, ]
-    #parser_classes = (XMLParser,)
 
     def get(self, request, format=None):
+        self.authentication_classes = [authentication.TokenAuthentication]
+        self.permission_classes = [permissions.IsAdminUser]
         """
         Return a list of all users.
         """
@@ -35,9 +34,11 @@ class AllUsers(APIView):
             return JsonResponse(serializer.data,safe=False)
         if request.content_type == 'application/xml':
             return Response(serializer.data)
+        return  JsonResponse(serializer.data,safe=False)
            
     
     def post(self, request, format=None):
+
         data=request.data.copy()
         serializer = CustomUserSerializer(data=request.data)
         if serializer.is_valid():
@@ -47,26 +48,39 @@ class AllUsers(APIView):
 
 
 class UserDetailsView(APIView):
+    """
+    User Details only viewable and changeable for  logged user himself
+    
+    """
+
+    authentication_classes = [authentication.TokenAuthentication]
+
     def get(self, request, pk, format=None):
         user = CustomUser.objects.get(pk=pk)
-        serializer = CustomUserSerializer(user)
-        return Response(serializer.data)
+        if user==self.request.user:
+            serializer = CustomUserSerializer(user)
+            return Response(serializer.data)
+        return Response(status=405)
 
     def put(self, request, pk, format=None):
         user = CustomUser.objects.get(pk=pk)
-        serializer = CustomUserSerializer(user, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=400)
+        if user==self.request.user:
+            serializer = CustomUserSerializer(user, data=request.data)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data)
+            return Response(serializer.errors, status=400)
+        return Response(status=405)
 
     def patch(self, request, pk, format=None):
         user = CustomUser.objects.get(pk=pk)
-        serializer = CustomUserSerializer(user, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=400)
+        if user==self.request.user:
+            serializer = CustomUserSerializer(user, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data)
+            return Response(serializer.errors, status=400)
+        return Response(status=405)
     
     def delete(self, request, pk, format=None):
         user = CustomUser.objects.get(pk=pk)
@@ -79,48 +93,90 @@ class UserDetailsView(APIView):
         
     
 class AllBooks(APIView):
+    
+     
      def get(self, request, format=None):
+
         """
-        Return a list of all users.
-        """
-        AllBooks = Book.objects.all()
-        serializer = BookSerializer(AllBooks, many=True)
+        Return a list of all books or filtered books based on query parameters.
+        POST only for authenticated users
+        """        
+     
+        title = request.GET.get('title', '')
+        authorname=request.GET.get('author','')
+        filtered_books = Book.objects.filter(title__icontains=title,author__author_pseudonym__icontains=authorname, )
+        serializer = BookSerializer(filtered_books, many=True)
+
         if request.content_type == 'application/json':
             return JsonResponse(serializer.data,safe=False)
         if request.content_type == 'application/xml':
             return Response(serializer.data)
-    
+        
+      
      def post(self, request, format=None):
+        self.authentication_classes = [authentication.TokenAuthentication]
         data=request.data
         serializer = BookSerializer(data=data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=201)
         return Response(serializer.errors, status=400)
+    
 
 class BookDetailsView(APIView):
+    """
+    Get Details of Book.For ability to put,patch or delete the logged user has to be author of book
+    """
     def get(self, request, pk, format=None):
         book = Book.objects.get(pk=pk)
-        serializer = BookSerializer(book)
-        return Response(serializer.data)
+        if book:
+            serializer = BookSerializer(book)
+            if request.content_type == 'application/json':
+                return JsonResponse(serializer.data,safe=False)
+            if request.content_type == 'application/xml':
+                return Response(serializer.data)
+            return Response(serializer.errors, status=400)
+        return Response(status=204)
+        
 
     def put(self, request, pk, format=None):
+
+        self.authentication_classes = [authentication.TokenAuthentication]
+
         book = Book.objects.get(pk=pk)
-        serializer = BookSerializer(book, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=400)
+        if book:
+            if book.author==self.request.user:
+                serializer = BookSerializer(book, data=request.data)
+                if serializer.is_valid():
+                    serializer.save()
+                    if request.content_type == 'application/json':
+                        return JsonResponse(serializer.data,safe=False)
+                    if request.content_type == 'application/xml':
+                        return Response(serializer.data)
+                return Response(serializer.errors, status=400)
+        return Response(status=204)
 
     def patch(self, request, pk, format=None):
+
+        self.authentication_classes = [authentication.TokenAuthentication]
+
         book = Book.objects.get(pk=pk)
-        serializer = Book(book, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=400)
+        if book:
+            if book.author==self.request.user:
+                serializer = BookSerializer(book, data=request.data, partial=True)
+                if serializer.is_valid():
+                    serializer.save()
+                    if request.content_type == 'application/json':
+                        return JsonResponse(serializer.data,safe=False)
+                    if request.content_type == 'application/xml':
+                        return Response(serializer.data)
+                return Response(serializer.errors, status=400)
+        return Response(status=204)
     
     def delete(self, request, pk, format=None):
+
+        self.authentication_classes = [authentication.TokenAuthentication]
+
         book = Book.objects.get(pk=pk)
         if book:
             if book.author==self.request.user:
@@ -132,7 +188,9 @@ class BookDetailsView(APIView):
      
 
 class LoginView(APIView):
-    # This view should be accessible also for unauthenticated users.
+    """
+    This view should be accessible also for unauthenticated users, Login with username and password
+    """
     permission_classes = (permissions.AllowAny,)
 
     def post(self, request, format=None):
