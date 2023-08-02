@@ -27,7 +27,7 @@ class CustomUserSerializer(serializers.ModelSerializer):
     
 
 class BookSerializer(serializers.ModelSerializer):
-
+    
     class Meta:
         model=Book
         fields=["title","author","description","cover","price"]
@@ -75,12 +75,8 @@ class LoginSerializer(serializers.Serializer):
         password = validated_data.get('password')
         print(username)
         if username and password:
-            # Try to authenticate the user using Django auth framework.
             user = authenticate(username=username, password=password)
-            
-                
             if not user:
-                # If we don't have a regular user, raise a ValidationError
                 msg = 'Access denied: wrong username or password.'
                 raise serializers.ValidationError(msg, code='authorization')
         else:

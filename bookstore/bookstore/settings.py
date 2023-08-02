@@ -135,6 +135,9 @@ REST_FRAMEWORK = {
     #'DEFAULT_PERMISSION_CLASSES': [
      #   'rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly'
     #]
+    #'DEFAULT_PARSER_CLASSES': (
+    #    'rest_framework_xml.parsers.XMLParser',
+    #),
     'DEFAULT_RENDERER_CLASSES':['rest_framework_xml.renderers.XMLRenderer',
                                 'rest_framework.renderers.JSONRenderer',
                                 'rest_framework.renderers.BrowsableAPIRenderer'

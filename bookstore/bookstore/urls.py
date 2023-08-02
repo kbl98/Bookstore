@@ -17,11 +17,13 @@ from django.contrib import admin
 from django.urls import path
 from books.views import AllUsers,UserDetailsView
 from books.views import AllBooks,LoginView
+from books.views import BookDetailsView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('users/',AllUsers.as_view()),
     path('users/<int:pk>/', UserDetailsView.as_view()),
-    path('users/',AllBooks.as_view()),
+    path('books/',AllBooks.as_view()),
     path('login/', LoginView.as_view()),
+    path('books/<int:pk>/', BookDetailsView.as_view()),
 ]
