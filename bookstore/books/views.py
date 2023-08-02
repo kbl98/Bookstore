@@ -1,12 +1,13 @@
 from django.shortcuts import render
-
+from django.contrib.auth import login
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import authentication, permissions
 from django.contrib.auth.models import User
 from .models import CustomUser
 from .serializers import CustomUserSerializer,BookSerializer
-
+from .serializers import LoginSerializer
+from rest_framework.authtoken.models import Token
 class AllUsers(APIView):
     """
     View to list all users in the system.
@@ -26,8 +27,8 @@ class AllUsers(APIView):
         return Response(serializer.data)
     
     def post(self, request, format=None):
-        data=request.data
-        serializer = CustomUserSerializer(data=data)
+        data=request.data.copy()
+        serializer = CustomUserSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=201)
@@ -77,3 +78,22 @@ class AllBooks(APIView):
             serializer.save()
             return Response(serializer.data, status=201)
         return Response(serializer.errors, status=400)
+     
+
+class LoginView(APIView):
+    # This view should be accessible also for unauthenticated users.
+    permission_classes = (permissions.AllowAny,)
+
+    def post(self, request, format=None):
+        data=request.data.copy()
+        serializer = LoginSerializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.user
+        login(request, user)
+        token,_ = Token.objects.get_or_create(user=user)
+        token.save()
+        return Response({
+            'token': token.key,
+            'user_id': user.pk,
+            'email': user.email
+        }, status=202)

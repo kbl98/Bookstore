@@ -1,21 +1,22 @@
 from rest_framework import serializers
 from .models import CustomUser,Book
-from rest_framework.authtoken.models import Token
+
+from django.contrib.auth import authenticate
 
 
 
 class CustomUserSerializer(serializers.ModelSerializer):
+    
     class Meta:
         model = CustomUser
-        fields = ['username', 'email','author_pseudonym']
+        fields = ['username', 'email','author_pseudonym','password']
 
     def create(self,validated_data):
         password=validated_data.get('password')
-        user=CustomUser.objects.create(username=validated_data.get('username'),email=validated_data.get('email'),author_pseudonym=validated_data.get('author_pseudonym'))
+        user=CustomUser(**validated_data)
         user.set_password(password)
         user.save()
-        token = Token.objects.create(user=user)
-        token.save()
+        
         return user
     
     def update(self, instance, validated_data):
@@ -26,7 +27,7 @@ class CustomUserSerializer(serializers.ModelSerializer):
     
 
 class BookSerializer(serializers.ModelSerializer):
-    
+
     class Meta:
         model=Book
         fields=["title","author","description","cover","price"]
@@ -44,3 +45,46 @@ class BookSerializer(serializers.ModelSerializer):
         instance.cover= validated_data.get('cover', instance.cover)
         instance.price= validated_data.get('price', instance.price)
         return instance
+    
+
+class LoginSerializer(serializers.Serializer):
+    """
+    This serializer defines two fields for authentication:
+      * username
+      * password.
+    It will try to authenticate the user with when validated.
+    """
+    username = serializers.CharField(
+        label="Username",
+        write_only=True
+    )
+    password = serializers.CharField(
+        label="Password",
+        # This will be used when the DRF browsable API is enabled
+        style={'input_type': 'password'},
+        trim_whitespace=False,
+        write_only=True
+    )
+    
+    
+
+    def validate(self, validated_data):
+        # Take username and password from request
+       
+        username = validated_data.get('username')
+        password = validated_data.get('password')
+        print(username)
+        if username and password:
+            # Try to authenticate the user using Django auth framework.
+            user = authenticate(username=username, password=password)
+            
+                
+            if not user:
+                # If we don't have a regular user, raise a ValidationError
+                msg = 'Access denied: wrong username or password.'
+                raise serializers.ValidationError(msg, code='authorization')
+        else:
+            msg = 'Both "username" and "password" are required.'
+            raise serializers.ValidationError(msg, code='authorization')
+        self.user = user  
+        return validated_data
