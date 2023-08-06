@@ -13,6 +13,22 @@ from rest_framework_xml.renderers import XMLRenderer
 from rest_framework_xml.parsers import XMLParser
 from django.http import HttpResponse
 
+
+class ReadOnly(permissions.BasePermission):
+    def has_permission(self, request, view):
+        return request.method in permissions.SAFE_METHODS
+    
+class PostOnly(permissions.BasePermission) :  
+    
+    def has_permission(self, request, view):
+        methods_list = ['GET', ]
+        if request.method not in methods_list:
+            return True
+        
+        return bool(request.user and request.user.is_superuser)
+
+        
+
 class AllUsers(APIView):
     """
     View to list all users in the system.
@@ -21,6 +37,7 @@ class AllUsers(APIView):
     """
    
     renderer_classes = [XMLRenderer, ]
+    permission_classes=[PostOnly]
 
     def get(self, request, format=None):
         self.authentication_classes = [authentication.TokenAuthentication]
@@ -97,7 +114,8 @@ class AllBooks(APIView):
      Return a list of all books or filtered books based on query parameters.
      POST only for authenticated users
      """        
-     
+     permission_classes = [permissions.IsAuthenticated|ReadOnly]
+
      def get(self, request, format=None):
         title = request.GET.get('title', '')
         authorname=request.GET.get('author','')
@@ -105,9 +123,10 @@ class AllBooks(APIView):
         serializer = BookSerializer(filtered_books, many=True)
 
         if request.content_type == 'application/json':
-            return JsonResponse(serializer.data,safe=False)
+            return JsonResponse(serializer.data,status=201,safe=False)
         if request.content_type == 'application/xml':
-            return Response(serializer.data)
+            return Response(serializer.data,status=201)
+        return  JsonResponse(serializer.data,safe=False)
         
       
      def post(self, request, format=None):
@@ -121,6 +140,9 @@ class AllBooks(APIView):
     
 
 class BookDetailsView(APIView):
+
+    permission_classes = [permissions.IsAuthenticated|ReadOnly]
+
     """
     Get Details of Book.For ability to put,patch or delete the logged user has to be author of book
     """
@@ -128,17 +150,18 @@ class BookDetailsView(APIView):
         book = Book.objects.get(pk=pk)
         if book:
             serializer = BookSerializer(book)
+
             if request.content_type == 'application/json':
                 return JsonResponse(serializer.data,safe=False)
             if request.content_type == 'application/xml':
                 return Response(serializer.data)
-            return Response(serializer.errors, status=400)
+            return JsonResponse(serializer.data,safe=False)
         return Response(status=204)
         
 
     def put(self, request, pk, format=None):
 
-        self.authentication_classes = [authentication.TokenAuthentication]
+        #self.authentication_classes = [authentication.TokenAuthentication]
 
         book = Book.objects.get(pk=pk)
         if book:
@@ -155,7 +178,7 @@ class BookDetailsView(APIView):
 
     def patch(self, request, pk, format=None):
 
-        self.authentication_classes = [authentication.TokenAuthentication]
+        #self.authentication_classes = [authentication.TokenAuthentication]
 
         book = Book.objects.get(pk=pk)
         if book:
@@ -172,7 +195,7 @@ class BookDetailsView(APIView):
     
     def delete(self, request, pk, format=None):
 
-        self.authentication_classes = [authentication.TokenAuthentication]
+        #self.authentication_classes = [authentication.TokenAuthentication]
 
         book = Book.objects.get(pk=pk)
         if book:

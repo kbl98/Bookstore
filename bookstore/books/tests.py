@@ -47,7 +47,7 @@ class LoginTests(TestCase):
 
     def test_get_all_users_without_token(self):
         response = self.client.get('/users/')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
 
     
@@ -65,6 +65,12 @@ class LoginTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(CustomUser.objects.filter(pk=self.user.pk).exists())
 
+    def test_delete_user_without_token(self):
+        self.client.defaults['HTTP_AUTHORIZATION'] = 'Token ' 
+        response = self.client.delete(('/users/'+ str(self.user.id)+'/'))
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        
+
 
 class BookViewTests(TestCase):
 
@@ -75,7 +81,7 @@ class BookViewTests(TestCase):
             author_pseudonym='pseudonym',
             email='testmail@mail.de'
         )
-        self.token = Token.objects.create(user=self.user)
+        
         self.book = Book.objects.create(
             title='Test Book',
             description='This is a test book.',
@@ -84,6 +90,7 @@ class BookViewTests(TestCase):
         )
 
     def test_create_book(self):
+        self.token = Token.objects.create(user=self.user)
         self.client.defaults['HTTP_AUTHORIZATION'] = 'Token ' + self.token.key
         data = {
             'title':'Test Book',
@@ -93,6 +100,38 @@ class BookViewTests(TestCase):
         }
         response = self.client.post('/books/', data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+       
+
+    def test_create_book_without_token(self):
+        #self.client.defaults['HTTP_AUTHORIZATION'] = 'Token ' + self.token.key
+        data = {
+            'title':'Test Book',
+            'description':'This is a test book.',
+            'author':self.user.id,
+            'price':'9.99'
+        }
+        response = self.client.post('/books/', data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_get_books(self):
+        response=self.client.get('/books/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_get_bookdetail(self):
+        response=self.client.get('/books/'+ str(self.book.id)+'/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_delete_bookdetail(self):
+        self.token = Token.objects.create(user=self.user)
+        self.client.defaults['HTTP_AUTHORIZATION'] = 'Token ' + self.token.key
+        response=self.client.delete('/books/'+ str(self.book.id)+'/')
+        self.assertEqual(response.status_code,status.HTTP_204_NO_CONTENT)
+
+    def test_delete_bookdetail_without_auth(self):
+        
+        response=self.client.delete('/books/'+ str(self.book.id)+'/')
+        self.assertEqual(response.status_code,status.HTTP_401_UNAUTHORIZED)
+       
        
     
         
